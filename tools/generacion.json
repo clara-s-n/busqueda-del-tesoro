@@ -1,0 +1,53 @@
+{
+  "generator": "https://github.com/Carnaux/NFT-Marker-Creator",
+  "commit": "44c4cdff3f3a184f61d52235fafed0098faf6478",
+  "flags": [
+    "-level=4",
+    "-leveli=3"
+  ],
+  "dpi": 72,
+  "targets": {
+    "ludus": {
+      "iset": {
+        "bytes": 71285,
+        "header_count": 15
+      },
+      "fset": {
+        "bytes": 14504,
+        "header_count": 15
+      },
+      "fset3": {
+        "bytes": 494140,
+        "header_count": 3742
+      }
+    },
+    "pastoral": {
+      "iset": {
+        "bytes": 33599,
+        "header_count": 14
+      },
+      "fset": {
+        "bytes": 9028,
+        "header_count": 14
+      },
+      "fset3": {
+        "bytes": 423904,
+        "header_count": 3210
+      }
+    },
+    "bienestar": {
+      "iset": {
+        "bytes": 32451,
+        "header_count": 14
+      },
+      "fset": {
+        "bytes": 8008,
+        "header_count": 14
+      },
+      "fset3": {
+        "bytes": 353020,
+        "header_count": 2673
+      }
+    }
+  }
+}
