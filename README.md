@@ -31,7 +31,16 @@ Ejecutar `node tests.mjs` (Node 20+). Comprueba inicio real con DOM simulado, ca
 Ejecutar también `node --test runtime-tests.mjs`: comprueba la espera de dimensiones de cámara, una sola imagen pendiente, límite de frecuencia, rotación, pausa/reanudación y liberación de recursos.
 Prueba opcional con Chromium: `python3 tools/browser_smoke.py` (requiere Playwright para Python y `/usr/bin/chromium`). Sirve el sitio bajo una subcarpeta como Pages y comprueba arranque real de cámara/tracker, tres etapas, límites de consumo, giros de pantalla, pestaña oculta, final y reinicio. La cámara y los eventos de hallazgo de este test son simulados.
 La prueba visual adicional `python3 tools/visual_smoke.py --artifacts /tmp/sacre-visual-check` requiere también ffmpeg y Pillow. Usa las imágenes de referencia como entrada de cámara, detecta los tres objetivos con el worker NFT real y verifica tanto el encuadre como los píxeles WebGL dibujados de la brújula, llave, cristal y cofre. Guarda capturas del juego y de los objetos aislados; no inyecta eventos de hallazgo.
+El cronómetro tiene pruebas independientes en `node --test clock-tests.mjs`. La revisión de interfaz `python3 tools/iphone_smoke.py --browser chromium` prueba el ancho del iPhone 12 con alturas útiles de 635, 700 y 844 píxeles, las tres etapas, los hallazgos y el diálogo final. Con WebKit instalado en Playwright, repetir con `--browser webkit`; reproduce además la API de permiso de sensores de Safari y exige cero solicitudes de ese permiso.
 Probar físicamente los tres pósteres antes de entregar. Si alguno falla, sustituir su referencia por una foto frontal más nítida y regenerar el dataset.
+
+## Safari de iPhone: interfaz y cronómetro
+
+El reconocimiento NFT se basa en la cámara, por lo que `device-orientation-permission-ui` y `xr-mode-ui` se desactivan antes de iniciar A-Frame. No se solicita acceso a sensores de movimiento. El permiso de cámara sigue siendo necesario.
+
+El HUD usa la altura dinámica de la pantalla (`dvh`) y sus zonas seguras. El estado de cámara se coloca por encima de la tarjeta, con su propio fondo. La tarjeta de hallazgo combina la ilustración, un texto corto y el siguiente paso; los títulos repetidos no desplazan la pista fuera de la pantalla. Los botones se mantienen accesibles al cambiar la altura disponible por las barras de Safari. La ayuda desplegada puede desplazarse dentro de la tarjeta.
+
+El cronómetro acumula tiempo activo con un reloj monotónico y se guarda entre etapas. Las pestañas ocultas y el tiempo con la página cerrada no se suman. Se conservan los fragmentos de partidas anteriores: si no tenían una duración activa registrada, las partidas pendientes empiezan a acumular desde cero; los finales antiguos muestran «Sin registro» en lugar de inventar una duración. Reiniciar borra tanto fragmentos como tiempo.
 
 ## Chrome Android: cámara y consumo
 
@@ -48,7 +57,7 @@ git show 0e414eb:assets/aframe-ar-nft.js > /tmp/aframe-ar-nft-original.js
 python3 tools/patch_arjs.py /tmp/aframe-ar-nft-original.js
 ```
 
-El script verifica SHA-256 antes de aplicar los ajustes y conserva el resto del bundle. La cámara usa su matriz de proyección calibrada compensando el relleno del tracker; los objetos se centran en el plano X/−Z del marcador NFT, no fuera del encuadre. El ajuste por eventos reemplaza el sondeo periódico de resize del bundle. También resuelve las URLs de calibración y datasets con `URL`, incluidas las subcarpetas de Pages. Los recursos modificados tienen una versión en la URL (`20261027-visual1`) para renovar su caché después de publicar; no hay service worker.
+El script verifica SHA-256 antes de aplicar los ajustes y conserva el resto del bundle. La cámara usa su matriz de proyección calibrada compensando el relleno del tracker; los objetos se centran en el plano X/−Z del marcador NFT, no fuera del encuadre. El ajuste por eventos reemplaza el sondeo periódico de resize del bundle. También resuelve las URLs de calibración y datasets con `URL`, incluidas las subcarpetas de Pages. Los recursos modificados tienen una versión en la URL (`20261027-iphone1`) para renovar su caché después de publicar; no hay service worker.
 
 La validación de escritorio no demuestra temperatura, estabilidad del controlador de cámara ni funcionamiento físico en un Samsung S24 FE. Tras publicar, probar Chrome en ese dispositivo en vertical desde el inicio, los tres pósteres, giros en ambos sentidos, regreso de segundo plano y varios minutos de uso. Repetir el recorrido en Safari de iPhone.
 
