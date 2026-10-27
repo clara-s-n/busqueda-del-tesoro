@@ -158,6 +158,33 @@ test('scene budgets, visibility, modal pause, and camera release', () => {
   assert.equal(scene.hidden, true);
 });
 
+test('NFT calibration updates the camera projection after rotation, preserving the marker pose', () => {
+  const f = fixture();
+  f.cameraReady();
+  let markerWrites = 0, inverseUpdates = 0;
+  f.controls.object3d.matrix.fromArray = () => { markerWrites++; };
+  const matrix = {elements: [], fromArray(values) { this.elements = [...values]; }};
+  const scene = new Target();
+  Object.assign(scene, {
+    camera: {projectionMatrix: matrix, projectionMatrixInverse: {copy() { return this; }, invert() { inverseUpdates++; }}},
+    systems: {arjs: {_arSession: {arContext: {arController: f.controller}, onResize() {}}}},
+    resize() {}
+  });
+  f.api.configureARScene(scene);
+  f.window.emit('arjs-video-loaded', {component: f.video});
+  const projection = [2, 0, 0, 0, 0, 3, 0, 0, 0.1, 0.2, -1, -1, 0, 0, -0.2, 0];
+  f.reply({type: 'loaded', proj: JSON.stringify(projection)});
+  f.advance(100);
+  assert.deepEqual(matrix.elements, projection, 'a landscape source needs no padding compensation');
+  f.video.videoWidth = 480; f.video.videoHeight = 640;
+  f.video.emit('resize');
+  f.advance(100);
+  assert.equal(matrix.elements[0], 2 * 320 / 180);
+  assert.equal(matrix.elements[5], 3);
+  assert.equal(markerWrites, 0, 'a camera projection must never overwrite the marker pose');
+  assert.equal(inverseUpdates, 2);
+});
+
 test('the patched AR.js bundle avoids duplicate main-thread NFT detection', () => {
   const bundle = fs.readFileSync(new URL('assets/aframe-ar-nft.js', import.meta.url), 'utf8');
   const start = bundle.indexOf('y.prototype._updateArtoolkit=') + 'y.prototype._updateArtoolkit='.length;

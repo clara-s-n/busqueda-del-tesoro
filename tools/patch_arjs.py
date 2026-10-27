@@ -50,6 +50,12 @@ replace_once('this._arSession.update(),this._arSession.onResize()', 'this._arSes
 # layout viewport repeatedly, move the HUD off screen, and enlarge GPU buffers.
 replace_once('var I=A._arSession.arSource;"tango"!==g.contextParameters.trackingBackend&&I.copyElementSizeTo(document.body);', '')
 
+# Camera and viewport events now drive sizing. The upstream forever-running
+# resize poll would keep overwriting the calibrated NFT projection every second.
+begin = code.index(',function(A,I=1/0,g=1e3){')
+end = code.index('},tick:function', begin)
+code = code[:begin] + code[end:]
+
 # URL() also supports localhost/IP origins and GitHub Pages project paths.
 begin = code.index('var i=/https?:', code.index('onmessage=function(A){var I=A.data;switch(I.type){case"init"'))
 end = code.index(';B.initWithDimensions', begin)

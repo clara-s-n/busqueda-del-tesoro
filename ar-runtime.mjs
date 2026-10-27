@@ -38,13 +38,10 @@ export function createNFTTracker({controls, controller, worker, markerUrl, onMar
   worker.onmessage = ({data}) => {
     if (disposed) return;
     if (data.type === 'loaded') {
-      // Preserve AR.js's initial projection handling.
-      const projection = JSON.parse(data.proj);
-      const scale = Math.min(width / video.videoWidth, height / video.videoHeight);
-      const x = width / (video.videoWidth * scale), y = height / (video.videoHeight * scale);
-      for (const index of [0, 4, 8, 12]) projection[index] *= x;
-      for (const index of [1, 5, 9, 13]) projection[index] *= y;
-      controls.object3d.matrix.fromArray(projection);
+      // This is a CAMERA projection, not a marker pose. Keep it for the scene
+      // camera and compensate for the black padding used by the NFT worker.
+      controller._nftProjection = JSON.parse(data.proj);
+      window.dispatchEvent(new Event('arjs-nft-projection'));
     } else if (data.type === 'markerInfos') {
       const marker = JSON.parse(data.marker);
       window.dispatchEvent(new CustomEvent('arjs-nft-init-data', {detail: marker}));
@@ -138,6 +135,15 @@ export function configureARScene(scene) {
       // A-Frame marks its canvas as managed, so AR.js otherwise skips this
       // alignment. Keep the overlay and the camera crop identical in portrait.
       if (scene.canvas) session?.arSource.copyElementSizeTo(scene.canvas);
+      const projection = session?.arContext.arController?._nftProjection;
+      if (projection) {
+        const scale = Math.min(320 / video.videoWidth, 240 / video.videoHeight);
+        const matrix = scene.camera.projectionMatrix;
+        matrix.fromArray(projection);
+        for (const index of [0, 4, 8, 12]) matrix.elements[index] *= 320 / (video.videoWidth * scale);
+        for (const index of [1, 5, 9, 13]) matrix.elements[index] *= 240 / (video.videoHeight * scale);
+        scene.camera.projectionMatrixInverse.copy(matrix).invert();
+      }
     }, 100);
   }
   function onVideo(event) {
@@ -196,6 +202,7 @@ export function configureARScene(scene) {
     if (video) window.removeEventListener('arjs-video-loaded', onVideo);
     window.removeEventListener('resize', resize);
     window.removeEventListener('orientationchange', resize);
+    window.removeEventListener('arjs-nft-projection', resize);
     document.removeEventListener('visibilitychange', onVisibility);
     window.removeEventListener('pagehide', dispose);
   }
@@ -203,6 +210,7 @@ export function configureARScene(scene) {
   window.addEventListener('arjs-video-loaded', onVideo);
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', resize);
+  window.addEventListener('arjs-nft-projection', resize);
   document.addEventListener('visibilitychange', onVisibility);
   window.addEventListener('pagehide', dispose);
   window.addEventListener('pageshow', event => {

@@ -14,11 +14,14 @@ Sitio estático publicado en https://clara-s-n.github.io/busqueda-del-tesoro/. U
 Pages está configurado desde la rama `main`, carpeta `/` (raíz). No hay compilación ni backend. Los cambios locales no actualizan el sitio hasta incorporarlos a esa rama. Conservar `assets`, los módulos `.mjs` y `.nojekyll`. El proyecto usa rutas relativas y funciona bajo `/nombre-del-repositorio/`.
 Para probar en PC: `python -m http.server 8000`, luego http://localhost:8000. Desde celular se necesita un servidor HTTPS. Abrir index.html directamente con file:// no sirve.
 
-## Recorrido pendiente de confirmar
-1. Póster violeta Cursos de docencia junto al letrero Centro LUDUS.
-2. Pastoral Universitaria, cartelera de la segunda foto.
-3. Bienestar Estudiantil, en esa misma cartelera.
-Indicar a los jugadores dónde empezar. Los pisos y sectores no fueron proporcionados y no se han inventado. Editar los textos de game.js cuando se confirmen. Ver preparar.html.
+## Recorrido confirmado
+Los tres puntos están en el **piso 1 del Edificio Sacré Coeur, pasando Admisiones**, según lo confirmado por el equipo.
+
+1. Inicio: póster violeta Cursos de docencia junto al letrero Centro LUDUS → brújula.
+2. Cartelera con el póster verde de Pastoral Universitaria → llave.
+3. En esa misma cartelera, póster azul de Bienestar Estudiantil → cristal y acceso al tesoro.
+
+Las indicaciones están incorporadas a la pantalla inicial, a las pistas y a `preparar.html`. Ver [ACTIVIDAD.md](ACTIVIDAD.md) para el contraste con la consigna y lo pendiente de comprobar con Bruno, Maxi y Gonzalo.
 
 ## Referencias y calidad
 Las dos fotos originales contienen desenfoque y reflejos. Se recortaron y rectificaron tres regiones mediante homografía, sin reconstrucción artificial. El recorte de Pastoral conserva una oclusión del papel amarillo presente en la foto. La detección en sitio NO está verificada. La generación de descriptores y las pruebas de lógica no garantizan reconocimiento con el celular frente al original.
@@ -27,6 +30,7 @@ Las dos fotos originales contienen desenfoque y reflejos. Se recortaron y rectif
 Ejecutar `node tests.mjs` (Node 20+). Comprueba inicio real con DOM simulado, carga de un solo NFT por etapa, eventos de hallazgo/pérdida, duplicados, reanudación, reinicio, progreso final y rutas locales. No simula visión artificial.
 Ejecutar también `node --test runtime-tests.mjs`: comprueba la espera de dimensiones de cámara, una sola imagen pendiente, límite de frecuencia, rotación, pausa/reanudación y liberación de recursos.
 Prueba opcional con Chromium: `python3 tools/browser_smoke.py` (requiere Playwright para Python y `/usr/bin/chromium`). Sirve el sitio bajo una subcarpeta como Pages y comprueba arranque real de cámara/tracker, tres etapas, límites de consumo, giros de pantalla, pestaña oculta, final y reinicio. La cámara y los eventos de hallazgo de este test son simulados.
+La prueba visual adicional `python3 tools/visual_smoke.py --artifacts /tmp/sacre-visual-check` requiere también ffmpeg y Pillow. Usa las imágenes de referencia como entrada de cámara, detecta los tres objetivos con el worker NFT real y verifica tanto el encuadre como los píxeles WebGL dibujados de la brújula, llave, cristal y cofre. Guarda capturas del juego y de los objetos aislados; no inyecta eventos de hallazgo.
 Probar físicamente los tres pósteres antes de entregar. Si alguno falla, sustituir su referencia por una foto frontal más nítida y regenerar el dataset.
 
 ## Chrome Android: cámara y consumo
@@ -35,7 +39,7 @@ Se corrigió la integración NFT para tomar `videoWidth`/`videoHeight` una vez d
 
 El reconocimiento tiene una sola imagen pendiente y un máximo de 12 análisis por segundo. El bundle original iniciaba otra cadena de procesamiento por cada mensaje de arranque del worker. Se evita además el análisis redundante de marcadores cuadrados en el hilo principal cuando la escena solo contiene NFT. La cámara solicita 640×480 a 24 fps (máximo 30); el dibujo se limita a 30 fps, densidad de píxeles 1 y sin antialiasing. La resolución solicitada de cámara es una preferencia: cada dispositivo puede elegir otra compatible.
 
-Al guardar los dos primeros fragmentos se detienen la cámara y el worker mientras se lee la siguiente pista; Continuar recarga y abre la cámara para el póster siguiente. La última pantalla y las pestañas ocultas pausan el reconocimiento y el dibujo. Ver el tesoro reanuda la escena final. Salir de la página libera las pistas de cámara y el worker. El progreso guardado conserva la misma clave y no se pierde con la actualización.
+Después de cada hallazgo, el objeto 3D permanece sobre el póster y se conserva una ilustración del elemento en la tarjeta y el inventario. Al pulsar Continuar se libera la cámara y el worker antes de abrir la etapa siguiente. El tercer hallazgo muestra el cristal; Abrir el tesoro revela un cofre ilustrado y el cierre de la historia. Ver el tesoro en AR reanuda la escena con el cofre 3D. La pantalla final y las pestañas ocultas pausan el reconocimiento y el dibujo. Salir de la página libera las pistas de cámara y el worker. El progreso guardado conserva la misma clave y no se pierde con la actualización; un tesoro ya encontrado también puede abrirse sin iniciar la cámara.
 
 `ar-runtime.mjs` contiene la integración legible. `assets/aframe-ar-nft.js` es una copia local con ajustes puntuales; no sustituirla por el bundle original sin adaptar esa integración. Para reproducirla desde el original verificado:
 
@@ -44,7 +48,7 @@ git show 0e414eb:assets/aframe-ar-nft.js > /tmp/aframe-ar-nft-original.js
 python3 tools/patch_arjs.py /tmp/aframe-ar-nft-original.js
 ```
 
-El script verifica SHA-256 antes de aplicar los ajustes y conserva el resto del bundle. También resuelve las URLs de calibración y datasets con `URL`, incluidas las subcarpetas de Pages. Los recursos modificados tienen una versión en la URL (`20261026-android1`) para renovar su caché después de publicar; no hay service worker.
+El script verifica SHA-256 antes de aplicar los ajustes y conserva el resto del bundle. La cámara usa su matriz de proyección calibrada compensando el relleno del tracker; los objetos se centran en el plano X/−Z del marcador NFT, no fuera del encuadre. El ajuste por eventos reemplaza el sondeo periódico de resize del bundle. También resuelve las URLs de calibración y datasets con `URL`, incluidas las subcarpetas de Pages. Los recursos modificados tienen una versión en la URL (`20261027-visual1`) para renovar su caché después de publicar; no hay service worker.
 
 La validación de escritorio no demuestra temperatura, estabilidad del controlador de cámara ni funcionamiento físico en un Samsung S24 FE. Tras publicar, probar Chrome en ese dispositivo en vertical desde el inicio, los tres pósteres, giros en ambos sentidos, regreso de segundo plano y varios minutos de uso. Repetir el recorrido en Safari de iPhone.
 
