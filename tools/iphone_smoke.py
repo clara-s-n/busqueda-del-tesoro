@@ -64,7 +64,7 @@ try:
           window.DeviceOrientationEvent=class extends Event {
             static requestPermission(){window.sensorRequests++;return Promise.reject(new Error('requires a gesture'))}
           };
-          if(!localStorage.getItem('sacre-coeur-posters-v2'))localStorage.setItem('sacre-coeur-posters-v2',JSON.stringify({found:[],started:Date.now()-886*60000,finished:0}));
+          if(!localStorage.getItem('sacre-coeur-spots-v3'))localStorage.setItem('sacre-coeur-spots-v3',JSON.stringify({found:[],started:Date.now()-886*60000,finished:0}));
         """)
         page.goto(origin,wait_until='networkidle')
         page.locator('#start').click()

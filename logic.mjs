@@ -24,3 +24,10 @@ export function formatElapsed(milliseconds){
  const total=Math.max(0,Math.floor(milliseconds/1000)),seconds=String(total%60).padStart(2,'0'),minutes=Math.floor(total/60);
  return minutes<60?`${String(minutes).padStart(2,'0')}:${seconds}`:`${Math.floor(minutes/60)}:${String(minutes%60).padStart(2,'0')}:${seconds}`;
 }
+
+// Only LUDUS is shared with the previous route. Retired posters cannot unlock
+// the new key/crystal or a completed treasure. Start a fresh active-time record.
+export function migratePreviousRoute(raw){
+ const previous=cleanState(raw),keepCompass=previous.found.includes(0);
+ return {found:keepCompass?[0]:[],started:keepCompass?previous.started:0,finished:0,elapsedMs:0};
+}

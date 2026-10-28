@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import {collect,cleanState,labels,createPlayClock,formatElapsed} from './logic.mjs';
-const root=new URL('.',import.meta.url),source=fs.readFileSync(new URL('game.js',root),'utf8').replace(/^import .* from '.\/logic\.mjs[^']*';$/m,'const {collect,cleanState,labels,createPlayClock,formatElapsed}=logic;').replace(/^import .* from '.\/ar-runtime\.mjs[^']*';$/m,'const {createNFTTracker,configureARScene}=runtime;');
-function fixture(saved=null,failFetch=false){
+import {collect,cleanState,labels,migratePreviousRoute,createPlayClock,formatElapsed} from './logic.mjs';
+const root=new URL('.',import.meta.url),source=fs.readFileSync(new URL('game.js',root),'utf8').replace(/^import .* from '.\/logic\.mjs[^']*';$/m,'const {collect,cleanState,labels,migratePreviousRoute,createPlayClock,formatElapsed}=logic;').replace(/^import .* from '.\/ar-runtime\.mjs[^']*';$/m,'const {createNFTTracker,configureARScene}=runtime;');
+function fixture(saved=null,failFetch=false,savedKey='sacre-coeur-spots-v3'){
  const ids=new Map(),windows={},timers=new Map(),requests=[],scenes=[],storage=new Map(),session=new Map(),runtimeActions=[];let seq=0,reloads=0;
- if(saved)storage.set('sacre-coeur-posters-v2',JSON.stringify(saved));
+ if(saved)storage.set(savedKey,JSON.stringify(saved));
  class Element{
   constructor(tag='div'){this.tag=tag;this.events={};this.attrs={};this.hidden=true;this.textContent='';this.firstChild={textContent:''};this.children=[];this.classList={toggle(){},add(){}}}
   setAttribute(k,v){this.attrs[k]=v}addEventListener(k,fn){this.events[k]=fn}querySelector(){return this.marker??=new Element('a-nft')}showModal(){this.open=true}close(){this.open=false;this.events.close?.()}
@@ -14,7 +14,7 @@ function fixture(saved=null,failFetch=false){
  $('inventory').children=[new Element(),new Element(),new Element()];
  const doc={getElementById:$,head:{append(s){queueMicrotask(()=>s.onload())}},body:{classList:{add(){}},append(s){scenes.push(s);s.events.loaded?.()}},createElement:t=>new Element(t),querySelectorAll:()=>[],addEventListener(){}};
  const win={addEventListener:(k,f)=>windows[k]=f};const location={href:'https://example.github.io/tesoro/',reload:()=>reloads++};
- const context={logic:{collect,cleanState,labels,createPlayClock,formatElapsed},runtime:{createNFTTracker(){},configureARScene(){return {dispose(){runtimeActions.push('dispose')},pause(){runtimeActions.push('pause')},resume(){runtimeActions.push('resume')}}}},document:doc,window:win,location,navigator:{mediaDevices:{getUserMedia(){}}},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},sessionStorage:{getItem:k=>session.get(k)||null,setItem:(k,v)=>session.set(k,v),removeItem:k=>session.delete(k)},setTimeout:(fn,ms)=>{timers.set(++seq,{fn,ms});return seq},clearTimeout:id=>timers.delete(id),setInterval(){},URL,Date,console,confirm:()=>true,fetch:async path=>{requests.push(path);return {ok:!failFetch,arrayBuffer:async()=>new ArrayBuffer(0)}}};
+ const context={logic:{collect,cleanState,labels,migratePreviousRoute,createPlayClock,formatElapsed},runtime:{createNFTTracker(){},configureARScene(){return {dispose(){runtimeActions.push('dispose')},pause(){runtimeActions.push('pause')},resume(){runtimeActions.push('resume')}}}},document:doc,window:win,location,navigator:{mediaDevices:{getUserMedia(){}}},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},sessionStorage:{getItem:k=>session.get(k)||null,setItem:(k,v)=>session.set(k,v),removeItem:k=>session.delete(k)},setTimeout:(fn,ms)=>{timers.set(++seq,{fn,ms});return seq},clearTimeout:id=>timers.delete(id),setInterval(){},URL,Date,console,confirm:()=>true,fetch:async path=>{requests.push(path);return {ok:!failFetch,arrayBuffer:async()=>new ArrayBuffer(0)}}};
  vm.runInNewContext(source,context,{filename:'game.js'});
  return {$,requests,scenes,windows,storage,session,runtimeActions,start:()=>$('start').onclick(),get reloads(){return reloads},fire(){const item=[...timers].find(([,v])=>v.ms===400);assert.ok(item,'temporizador de confirmación');timers.delete(item[0]);item[1].fn()},dwellCount:()=>[...timers.values()].filter(t=>t.ms===400).length};
 }
@@ -23,13 +23,29 @@ assert.equal(scene.attrs['device-orientation-permission-ui'],'enabled: false');
 scene.marker.events.markerFound();scene.marker.events.markerLost();assert.equal(a.dwellCount(),0);assert.equal(a.$('progress').textContent,'0 / 3 fragmentos');
 assert.match(a.$('clue-text').textContent,/piso 1.*Admisiones/);
 scene.marker.events.markerFound();a.fire();assert.equal(a.$('progress').textContent,'1 / 3 fragmentos');assert.equal(a.$('next').hidden,false);assert.equal(a.$('discovery').hidden,false);assert.match(a.$('discovery-image').src,/compass.svg$/);assert.deepEqual(a.runtimeActions,[],'el modelo debe seguir visible después del hallazgo');scene.marker.events.markerFound();assert.equal(a.dwellCount(),0);assert.equal(a.$('progress').textContent,'1 / 3 fragmentos');a.$('next').onclick();assert.deepEqual(a.runtimeActions,['dispose']);assert.equal(a.reloads,1);assert.equal(a.session.get('sacre-autostart'),'1');
-const first=JSON.parse(a.storage.get('sacre-coeur-posters-v2'));
-a=fixture(first);await a.start();assert.match(a.scenes[0].innerHTML,/targets\/pastoral/);a.scenes[0].marker.events.markerFound();a.fire();assert.equal(a.$('progress').textContent,'2 / 3 fragmentos');assert.match(a.$('discovery-image').src,/key.svg$/);const second=JSON.parse(a.storage.get('sacre-coeur-posters-v2'));
-a=fixture(second);await a.start();assert.match(a.scenes[0].innerHTML,/targets\/bienestar/);a.scenes[0].marker.events.markerFound();a.fire();assert.equal(a.$('progress').textContent,'3 / 3 fragmentos');assert.match(a.$('discovery-image').src,/crystal.svg$/);assert.notEqual(a.$('win').open,true,'primero se muestra el cristal');assert.equal(a.$('open-treasure').hidden,false);assert.deepEqual(a.runtimeActions,[]);a.$('open-treasure').onclick();assert.equal(a.$('win').open,true);assert.deepEqual(a.runtimeActions,['pause']);const completed=JSON.parse(a.storage.get('sacre-coeur-posters-v2'));assert.ok(completed.finished>0);a.$('continue').onclick();assert.equal(a.$('win').open,false);assert.deepEqual(a.runtimeActions,['pause','resume']);a.$('reset').onclick();assert.equal(a.reloads,1);assert.deepEqual(JSON.parse(a.storage.get('sacre-coeur-posters-v2')).found,[]);
+const first=JSON.parse(a.storage.get('sacre-coeur-spots-v3'));
+a=fixture(first);await a.start();assert.match(a.scenes[0].innerHTML,/targets\/patio/);a.scenes[0].marker.events.markerFound();a.fire();assert.equal(a.$('progress').textContent,'2 / 3 fragmentos');assert.match(a.$('discovery-image').src,/key.svg$/);const second=JSON.parse(a.storage.get('sacre-coeur-spots-v3'));
+a=fixture(second);await a.start();assert.match(a.scenes[0].innerHTML,/targets\/capilla/);a.scenes[0].marker.events.markerFound();a.fire();assert.equal(a.$('progress').textContent,'3 / 3 fragmentos');assert.match(a.$('discovery-image').src,/crystal.svg$/);assert.notEqual(a.$('win').open,true,'primero se muestra el cristal');assert.equal(a.$('open-treasure').hidden,false);assert.deepEqual(a.runtimeActions,[]);a.$('open-treasure').onclick();assert.equal(a.$('win').open,true);assert.deepEqual(a.runtimeActions,['pause']);const completed=JSON.parse(a.storage.get('sacre-coeur-spots-v3'));assert.ok(completed.finished>0);a.$('continue').onclick();assert.equal(a.$('win').open,false);assert.deepEqual(a.runtimeActions,['pause','resume']);a.$('reset').onclick();assert.equal(a.reloads,1);assert.deepEqual(JSON.parse(a.storage.get('sacre-coeur-spots-v3')).found,[]);
 a=fixture(completed);assert.equal(a.$('saved-treasure').hidden,false);a.$('saved-treasure').onclick();assert.equal(a.$('win').open,true);assert.equal(a.requests.length,0,'el tesoro guardado se puede abrir sin cámara');
-a=fixture({found:[0],started:Date.now()-886*60_000,finished:0});await a.start();assert.equal(a.$('timer').textContent,'00:00');assert.deepEqual(JSON.parse(a.storage.get('sacre-coeur-posters-v2')).found,[0],'la migración del cronómetro no borra fragmentos');
+a=fixture({found:[0],started:Date.now()-886*60_000,finished:0});await a.start();assert.equal(a.$('timer').textContent,'00:00');assert.deepEqual(JSON.parse(a.storage.get('sacre-coeur-spots-v3')).found,[0],'la migración del cronómetro no borra fragmentos');
+// Completed and in-progress games from the retired route retain only LUDUS.
+for(const found of [[0],[0,1],[0,1,2]]){
+ a=fixture({found,started:1000,finished:found.length===3?2000:0,elapsedMs:90000},false,'sacre-coeur-posters-v2');
+ assert.equal(a.$('saved-treasure').hidden,true);
+ assert.match(a.$('resume').textContent,/Recorrido actualizado/);
+ await a.start();
+ assert.match(a.scenes[0].innerHTML,/targets\/patio/);
+ assert.match(a.$('clue-text').textContent,/patio.*azul/);
+ const migrated=JSON.parse(a.storage.get('sacre-coeur-spots-v3'));
+ assert.deepEqual(migrated.found,[0]);assert.equal(migrated.finished,0);assert.ok(migrated.elapsedMs<1000);
+ a.$('reset').onclick();
+ const reset=JSON.parse(a.storage.get('sacre-coeur-spots-v3'));
+ assert.deepEqual(reset.found,[]);
+ a=fixture(reset);await a.start();assert.match(a.scenes[0].innerHTML,/targets\/ludus/);
+}
+assert.deepEqual(migratePreviousRoute({found:[2],started:1,finished:0}).found,[]);
 a=fixture(null,true);await a.start();assert.equal(a.scenes.length,0);assert.equal(a.$('retry').hidden,false);assert.match(a.$('clue-text').textContent,/Falta un archivo/);
 assert.equal(collect([],1).kind,'locked');assert.equal(collect([0],0).kind,'repeat');assert.equal(collect([0,1],2).kind,'complete');assert.deepEqual(cleanState({found:[2],started:1,finished:0}).found,[]);assert.deepEqual(cleanState({found:[0],started:1,finished:NaN}).found,[]);
-for(const id of ['ludus','pastoral','bienestar'])for(const ext of ['iset','fset','fset3','jpg','png'])assert.ok(fs.statSync(new URL(`assets/targets/${id}.${ext}`,root)).size>100);
+for(const id of ['ludus','patio','capilla'])for(const ext of ['iset','fset','fset3','jpg','png'])assert.ok(fs.statSync(new URL(`assets/targets/${id}.${ext}`,root)).size>100);
 for(const file of ['index.html','preparar.html']){const html=fs.readFileSync(new URL(file,root),'utf8');for(const match of html.matchAll(/(?:src|href)="([^"#]+)"/g)){const path=match[1];if(path==='./'||/^https?:/.test(path))continue;assert.ok(fs.existsSync(new URL(path,root)),`${file}: ${path}`)}}
 console.log('PASS: tres etapas NFT, rutas GitHub Pages, pérdida/hallazgo, duplicados, reanudación, reinicio, final y error de recursos.');

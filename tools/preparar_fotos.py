@@ -7,7 +7,7 @@ parser=argparse.ArgumentParser();parser.add_argument('--source-dir',type=Path,re
 source=args.source_dir
 out=Path(__file__).resolve().parents[1]/'assets/targets'
 # Esquinas TL, TR, BR, BL sobre previsualización 1368x1824.
-cases=[('ludus','WhatsApp Image 2026-10-23 at 20.57.36.jpeg',[(514,567),(1160,573),(1127,1476),(506,1447)],(600,850)),('pastoral','WhatsApp Image 2026-10-23 at 20.57.36 (1).jpeg',[(414,281),(779,236),(815,813),(464,852)],(540,800)),('bienestar','WhatsApp Image 2026-10-23 at 20.57.36 (1).jpeg',[(531,1008),(890,973),(945,1489),(585,1560)],(540,800))]
+cases=[('ludus','WhatsApp Image 2026-10-23 at 20.57.36.jpeg',[(514,567),(1160,573),(1127,1476),(506,1447)],(600,850))]
 for name,file,quad,size in cases:
  im=ImageOps.exif_transpose(Image.open(source/file)).convert('RGB');quad=[(x*im.width/1368,y*im.height/1824) for x,y in quad]
  w,h=size;dest=[(0,0),(w,0),(w,h),(0,h)];a=[];b=[]

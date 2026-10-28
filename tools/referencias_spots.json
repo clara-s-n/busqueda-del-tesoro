@@ -1,0 +1,30 @@
+{
+  "patio": {
+    "name": "Cartel azul de accesibilidad",
+    "location": "Saliendo al patio",
+    "width": 606,
+    "height": 651,
+    "dpi": 72,
+    "crop_box": [
+      438,
+      281,
+      1044,
+      932
+    ],
+    "source_sha256": "20780a9822135acd753740a39727f4efc3dbe0acda8fb8e8831deb2df6f72384"
+  },
+  "capilla": {
+    "name": "Capilla del Encuentro",
+    "location": "Segundo piso, pasando la sala Bauzá",
+    "width": 900,
+    "height": 258,
+    "dpi": 72,
+    "crop_box": [
+      112,
+      618,
+      1482,
+      1011
+    ],
+    "source_sha256": "7585d9fd7ae7973174e962175fa0886ad427d842051f13ddd2b370ba83260685"
+  }
+}

@@ -33,7 +33,7 @@ try:
         page.on('response', lambda r: failed_assets.append(r.url) if r.status >= 400 and '/assets/' in r.url else None)
         page.goto(origin, wait_until='networkidle')
         page.locator('#start').click()
-        for stage, target in enumerate(['ludus', 'pastoral', 'bienestar']):
+        for stage, target in enumerate(['ludus', 'patio', 'capilla']):
             page.wait_for_function("document.querySelector('#status').textContent.startsWith('Listo')", timeout=55000)
             assert page.locator('a-nft').count() == 1
             assert page.locator('a-nft').get_attribute('url') == origin + 'assets/targets/' + target
@@ -86,7 +86,7 @@ try:
         page.on('dialog', lambda dialog: dialog.accept())
         page.locator('#reset').click()
         page.wait_for_load_state('domcontentloaded')
-        assert page.evaluate("JSON.parse(localStorage.getItem('sacre-coeur-posters-v2')).found.length") == 0
+        assert page.evaluate("JSON.parse(localStorage.getItem('sacre-coeur-spots-v3')).found.length") == 0
         assert not errors, errors
         assert not failed_assets, failed_assets
         print('PASS: completion, treasure resume, reset, camera release between stages; no JavaScript errors or asset failures', flush=True)

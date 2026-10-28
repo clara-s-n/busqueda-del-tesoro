@@ -55,10 +55,10 @@ try:
         temp = Path(temp)
         artifacts = args.artifacts or temp / 'screenshots'
         artifacts.mkdir(parents=True, exist_ok=True)
-        for stage, (target, item) in enumerate([('ludus', 'compass'), ('pastoral', 'key'), ('bienestar', 'crystal')]):
+        for stage, (target, item) in enumerate([('ludus', 'compass'), ('patio', 'key'), ('capilla', 'crystal')]):
             camera = temp / (target + '.y4m')
             subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-loop', '1', '-i', str(repo / 'assets/targets' / (target + '.png')),
-                            '-vf', 'scale=-2:420,pad=640:480:(ow-iw)/2:(oh-ih)/2:color=gray,fps=15',
+                            '-vf', 'scale=580:420:force_original_aspect_ratio=decrease:force_divisible_by=2,pad=640:480:(ow-iw)/2:(oh-ih)/2:color=gray,fps=15',
                             '-t', '1', '-pix_fmt', 'yuv420p', str(camera)], check=True)
             browser = p.chromium.launch(executable_path='/usr/bin/chromium', headless=True,
                 args=['--no-sandbox', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream',
@@ -67,7 +67,7 @@ try:
             errors = []
             page.on('pageerror', lambda error: errors.append(str(error)))
             initial = {'found': list(range(stage)), 'started': int(time.time() * 1000) - 1000, 'finished': 0}
-            page.add_init_script("if(!localStorage.getItem('sacre-coeur-posters-v2'))localStorage.setItem('sacre-coeur-posters-v2'," + json.dumps(json.dumps(initial)) + ")")
+            page.add_init_script("if(!localStorage.getItem('sacre-coeur-spots-v3'))localStorage.setItem('sacre-coeur-spots-v3'," + json.dumps(json.dumps(initial)) + ")")
             page.goto(origin, wait_until='networkidle')
             page.locator('#start').click()
             page.wait_for_function('(count)=>document.querySelector("#progress").textContent.startsWith(count+" / 3")', arg=stage + 1, timeout=30000)

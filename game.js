@@ -1,7 +1,17 @@
-import {collect,cleanState,labels,createPlayClock,formatElapsed} from './logic.mjs?v=20261027-iphone1';
-import {createNFTTracker,configureARScene} from './ar-runtime.mjs?v=20261027-iphone1';
-const $=id=>document.getElementById(id),key='sacre-coeur-posters-v2';let state;try{state=cleanState(JSON.parse(localStorage.getItem(key)))}catch{state=cleanState(null)}let audio,sound=true,active=false,scanned=false;
-const targets=[{id:'ludus',name:'Cursos de docencia · LUDUS',width:600,height:850},{id:'pastoral',name:'Pastoral Universitaria',width:540,height:800},{id:'bienestar',name:'Bienestar Estudiantil',width:540,height:800}];
+import {collect,cleanState,labels,migratePreviousRoute,createPlayClock,formatElapsed} from './logic.mjs?v=20261028-spots1';
+import {createNFTTracker,configureARScene} from './ar-runtime.mjs?v=20261028-spots1';
+const $=id=>document.getElementById(id),key='sacre-coeur-spots-v3';
+let state,routeUpdated=false;
+try{
+ const current=localStorage.getItem(key);
+ if(current===null){
+  const previous=JSON.parse(localStorage.getItem('sacre-coeur-posters-v2'));
+  state=migratePreviousRoute(previous);routeUpdated=state.found.length>0;
+  localStorage.setItem(key,JSON.stringify(state));
+ }else state=cleanState(JSON.parse(current));
+}catch{state=cleanState(null)}
+let audio,sound=true,active=false,scanned=false;
+const targets=[{id:'ludus',name:'Cursos de docencia · LUDUS',width:600,height:850},{id:'patio',name:'Cartel azul de accesibilidad · Salida al patio',width:606,height:651},{id:'capilla',name:'Capilla del Encuentro · Segundo piso',width:900,height:258}];
 const stage=Math.min(state.found.length,2);
 let arRuntime;
 const clock=createPlayClock(state.elapsedMs||0);
@@ -13,13 +23,13 @@ const discoveries=[
 ];
 
 function showDiscovery(index){const item=discoveries[index];$('discovery-image').src=`assets/items/${item.image}.svg`;$('discovery-image').alt=item.name;$('discovery-name').textContent=item.name;$('discovery-text').textContent=item.text;$('discovery').hidden=false;$('scan-help').hidden=true;document.body.classList.add('has-discovery');}
-function openTreasure(){if(state.found.length!==3)return;treasureRevealed=true;render();$('status').textContent='Tesoro abierto · Enfoca Bienestar para ver el cofre';$('result').textContent=`3 fragmentos encontrados · Tiempo: ${time()}`;arRuntime?.pause();$('win').showModal();chime(true)}
+function openTreasure(){if(state.found.length!==3)return;treasureRevealed=true;render();$('status').textContent='Tesoro abierto · Enfoca el letrero de la capilla para ver el cofre';$('result').textContent=`3 fragmentos encontrados · Tiempo: ${time()}`;arRuntime?.pause();$('win').showModal();chime(true)}
 
 function save(){if(state.started&&(!state.finished||state.elapsedMs!==undefined))state.elapsedMs=clock.value();try{localStorage.setItem(key,JSON.stringify(state))}catch{}}
 function time(){return state.finished&&state.elapsedMs===undefined?'Sin registro':formatElapsed(clock.value())}
-function render(){ $('progress').textContent=`${state.found.length} / 3 fragmentos`;[...$('inventory').children].forEach((li,i)=>li.classList.toggle('found',state.found.includes(i)));if(state.started)$('timer').textContent=time();const n=state.found.length;$('chapter').textContent=n===3?(treasureRevealed?'EL TESORO ESTÁ ABIERTO':'LAS TRES CLAVES ESTÁN REUNIDAS'):`ETAPA ${n+1} DE 3`;$('clue-title').textContent=['Encuentra la brújula','Encuentra la llave','Encuentra el cristal',treasureRevealed?'El corazón del conocimiento':'Abre el tesoro'][n];$('clue-text').textContent=['En el piso 1, pasando Admisiones, busca el póster violeta junto al letrero Centro LUDUS.','En el mismo piso, busca el póster verde de Pastoral Universitaria en la cartelera.','En esa misma cartelera, busca el póster de Bienestar Estudiantil con encabezado azul.',treasureRevealed?'Enfoca Bienestar para ver el cofre en AR, o vuelve a abrir su imagen.':'Pulsa Abrir el tesoro para revelar el cofre y el final de la historia.'][n];$('open-treasure').hidden=n!==3;$('open-treasure').textContent=treasureRevealed?'Ver el tesoro de nuevo':'Abrir el tesoro';document.querySelectorAll('.treasure').forEach(e=>e.setAttribute('visible',n===3&&treasureRevealed));document.querySelectorAll('.crystal').forEach(e=>e.setAttribute('visible',!treasureRevealed));}
+function render(){ $('progress').textContent=`${state.found.length} / 3 fragmentos`;[...$('inventory').children].forEach((li,i)=>li.classList.toggle('found',state.found.includes(i)));if(state.started)$('timer').textContent=time();const n=state.found.length;$('chapter').textContent=n===3?(treasureRevealed?'EL TESORO ESTÁ ABIERTO':'LAS TRES CLAVES ESTÁN REUNIDAS'):`ETAPA ${n+1} DE 3`;$('clue-title').textContent=['Encuentra la brújula','Encuentra la llave','Encuentra el cristal',treasureRevealed?'El corazón del conocimiento':'Abre el tesoro'][n];$('clue-text').textContent=['En el piso 1, pasando Admisiones, busca el póster violeta junto al letrero Centro LUDUS.','Sal hacia el patio y busca el cartel azul de accesibilidad. Enfoca el cartel completo para encontrar la llave.','Sube al segundo piso. Pasando la sala Bauzá, busca el letrero «Capilla del Encuentro» y enfoca las dos líneas completas.',treasureRevealed?'Enfoca el letrero de la capilla para ver el cofre en AR, o vuelve a abrir su imagen.':'Pulsa Abrir el tesoro para revelar el cofre y el final de la historia.'][n];$('open-treasure').hidden=n!==3;$('open-treasure').textContent=treasureRevealed?'Ver el tesoro de nuevo':'Abrir el tesoro';document.querySelectorAll('.treasure').forEach(e=>e.setAttribute('visible',n===3&&treasureRevealed));document.querySelectorAll('.crystal').forEach(e=>e.setAttribute('visible',!treasureRevealed));}
 function chime(final=false){if(!sound||!audio)return;audio.resume();[523,659,final?1047:784].forEach((f,i)=>{const o=audio.createOscillator(),g=audio.createGain();o.connect(g);g.connect(audio.destination);o.frequency.value=f;const t=audio.currentTime+i*.14;g.gain.setValueAtTime(.06,t);g.gain.exponentialRampToValueAtTime(.001,t+.35);o.start(t);o.stop(t+.36)});navigator.vibrate?.(final?[100,50,150]:70)}
-function found(index){if(scanned)return;const r=collect(state.found,index);if(r.kind==='locked'){ $('status').textContent=`Este símbolo espera. Encuentra primero: ${labels[state.found.length]}`;return}if(r.kind==='repeat')return;scanned=true;state.found=r.found;if(r.kind==='complete'){clock.pause();state.finished=Date.now();}save();render();showDiscovery(index);chime();$('status').textContent=`${labels[index]} encontrada · Mírala sobre el póster`;if(index===2)$('status').textContent='Cristal encontrado · Ya puedes abrir el tesoro';if(r.kind==='new'){$('next').hidden=false;$('next').textContent=index===0?'Ir a Pastoral →':'Ir a Bienestar →';}}
+function found(index){if(scanned)return;const r=collect(state.found,index);if(r.kind==='locked'){ $('status').textContent=`Este símbolo espera. Encuentra primero: ${labels[state.found.length]}`;return}if(r.kind==='repeat')return;scanned=true;state.found=r.found;if(r.kind==='complete'){clock.pause();state.finished=Date.now();}save();render();showDiscovery(index);chime();$('status').textContent=`${labels[index]} encontrada · Mírala en AR`;if(index===2)$('status').textContent='Cristal encontrado · Ya puedes abrir el tesoro';if(r.kind==='new'){$('next').hidden=false;$('next').textContent=index===0?'Ir al patio →':'Ir a la capilla →';}}
 function script(src){return new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=reject;document.head.append(s)})}
 const spin='animation="property: rotation; to: 0 360 0; dur: 6000; loop: true; easing: linear"';
 const sway='animation="property: rotation; from: 0 0 -12; to: 0 0 12; dur: 2000; dir: alternate; loop: true; easing: easeInOutSine"';
@@ -30,14 +40,14 @@ async function start(){
  if(!state.started)state.started=Date.now();if(!state.finished){if(!document.hidden)clock.start();save()}render();
  if(state.found.length===3){scanned=true;showDiscovery(2)}
  $('target-name').textContent=targets[stage].name;$('target-preview').src=`assets/targets/${targets[stage].id}.jpg`;
- $('status').textContent='Cargando reconocimiento del póster…';
+ $('status').textContent='Cargando reconocimiento…';
  try{
   if(!navigator.mediaDevices?.getUserMedia)throw Error('Necesitas un navegador compatible y una conexión HTTPS.');
   // Comprobar que los tres archivos binarios del objetivo existen antes de pedir cámara.
   await Promise.all(['iset','fset','fset3'].map(async ext=>{const r=await fetch(`assets/targets/${targets[stage].id}.${ext}`);if(!r.ok)throw Error('Falta un archivo de reconocimiento. Vuelve a subir la carpeta assets completa.');await r.arrayBuffer()}));
   await script('assets/aframe.min.js');
   window.SacreAR={createNFTTracker};
-  await script('assets/aframe-ar-nft.js?v=20261027-iphone1');
+  await script('assets/aframe-ar-nft.js?v=20261028-spots1');
   const scene=document.createElement('a-scene');scene.setAttribute('embedded','');scene.setAttribute('xr-mode-ui','enabled: false');scene.setAttribute('device-orientation-permission-ui','enabled: false');scene.setAttribute('renderer','alpha: true; antialias: false; logarithmicDepthBuffer: false; maxCanvasWidth: 1280; maxCanvasHeight: 1280');
   scene.setAttribute('arjs','sourceType: webcam; sourceWidth: 640; sourceHeight: 480; canvasWidth: 320; canvasHeight: 240; maxDetectionRate: 12; cameraParametersUrl: assets/camera_para.dat; debugUIEnabled: false; trackingMethod: best;');
   arRuntime=configureARScene(scene);
@@ -45,8 +55,8 @@ async function start(){
   const t=targets[stage],x=t.width/72*25.4/2,y=t.height/72*25.4/2;
   scene.innerHTML=`<a-nft type="nft" url="${new URL('assets/targets/'+t.id,location.href).href}" emitevents="true" smooth="true" smooth-count="5" smooth-tolerance="0.01" smooth-threshold="2"><a-entity class="item-model" position="${x} 0 ${-y}" rotation="-90 0 0" scale="65 65 65">${models[stage]}</a-entity></a-nft><a-entity camera></a-entity>`;
   const marker=scene.querySelector('a-nft');let dwell;
-  marker.addEventListener('markerFound',()=>{if(scanned){$('status').textContent=treasureRevealed?'Tesoro abierto · Cofre sobre el póster':`${labels[stage]} en AR · Fragmento guardado`;return}clearTimeout(dwell);$('status').textContent='Póster localizado · Mantén la cámara quieta';dwell=setTimeout(()=>found(stage),400)});
-  marker.addEventListener('markerLost',()=>{clearTimeout(dwell);$('status').textContent=scanned?'Fragmento guardado · Vuelve a enfocar para verlo en AR':'Enfoca el póster completo, sin reflejos'});
+  marker.addEventListener('markerFound',()=>{if(scanned){$('status').textContent=treasureRevealed?'Tesoro abierto · Cofre sobre el letrero':`${labels[stage]} en AR · Fragmento guardado`;return}clearTimeout(dwell);$('status').textContent='Punto localizado · Mantén la cámara quieta';dwell=setTimeout(()=>found(stage),400)});
+  marker.addEventListener('markerLost',()=>{clearTimeout(dwell);$('status').textContent=scanned?'Fragmento guardado · Vuelve a enfocar para verlo en AR':'Enfoca la referencia completa, sin reflejos'});
   scene.addEventListener('loaded',render);document.body.append(scene);
   setTimeout(()=>{if(!nftReady)error('El reconocimiento está tardando. Revisa la conexión o vuelve a intentar.')},45000);
  }catch(e){arRuntime?.dispose();error(e.message||'No se pudieron cargar los recursos AR. Revisa tu conexión.')}
@@ -56,8 +66,8 @@ window.addEventListener('arjs-nft-loaded',()=>{nftReady=true;$('status').textCon
 
 function error(message){arRuntime?.dispose();$('status').textContent='No se pudo iniciar el reconocimiento AR';$('clue-title').textContent='Vamos a intentarlo de nuevo';$('clue-text').textContent=message;$('retry').hidden=false}
 window.addEventListener('arjs-nft-error',()=>error('Se interrumpió el reconocimiento. Vuelve a intentar.'));
-window.addEventListener('camera-error',()=>error('Permite el acceso a la cámara en los ajustes del navegador. Cierra otras apps que la estén usando y vuelve a intentar.'));window.addEventListener('arjs-video-loaded',()=>{$('status').textContent=nftReady?'Cámara lista · Enfoca el póster':'Cámara lista · Preparando reconocimiento…'});
-$('start').onclick=start;$('retry').onclick=()=>location.reload();$('exit').onclick=()=>location.reload();$('continue').onclick=()=>{$('win').close();if(!active)start()};$('win').addEventListener('close',()=>{if(active)arRuntime?.resume()});$('open-treasure').onclick=openTreasure;$('saved-treasure').onclick=openTreasure;$('saved-treasure').hidden=state.found.length!==3;$('sound').onclick=()=>{audio?.resume().catch(()=>{});sound=!sound;$('sound').textContent=`Sonido: ${sound?'sí':'no'}`;$('sound').setAttribute('aria-pressed',sound)};$('reset').onclick=()=>{if(confirm('¿Borrar los fragmentos encontrados y comenzar de nuevo?')){clock.reset();state={found:[],started:0,finished:0,elapsedMs:0};save();sessionStorage.removeItem('sacre-autostart');location.reload()}};let clockTicks=0;setInterval(()=>{if(active&&state.started&&!document.hidden){$('timer').textContent=time();if(!state.finished&&++clockTicks%5===0)save()}},1000);if(state.found.length){$('start').firstChild.textContent='Continuar expedición ';$('resume').textContent=`Tienes ${state.found.length} de 3 fragmentos guardados.`}
+window.addEventListener('camera-error',()=>error('Permite el acceso a la cámara en los ajustes del navegador. Cierra otras apps que la estén usando y vuelve a intentar.'));window.addEventListener('arjs-video-loaded',()=>{$('status').textContent=nftReady?'Cámara lista · Enfoca la referencia':'Cámara lista · Preparando reconocimiento…'});
+$('start').onclick=start;$('retry').onclick=()=>location.reload();$('exit').onclick=()=>location.reload();$('continue').onclick=()=>{$('win').close();if(!active)start()};$('win').addEventListener('close',()=>{if(active)arRuntime?.resume()});$('open-treasure').onclick=openTreasure;$('saved-treasure').onclick=openTreasure;$('saved-treasure').hidden=state.found.length!==3;$('sound').onclick=()=>{audio?.resume().catch(()=>{});sound=!sound;$('sound').textContent=`Sonido: ${sound?'sí':'no'}`;$('sound').setAttribute('aria-pressed',sound)};$('reset').onclick=()=>{if(confirm('¿Borrar los fragmentos encontrados y comenzar de nuevo?')){clock.reset();state={found:[],started:0,finished:0,elapsedMs:0};save();sessionStorage.removeItem('sacre-autostart');location.reload()}};let clockTicks=0;setInterval(()=>{if(active&&state.started&&!document.hidden){$('timer').textContent=time();if(!state.finished&&++clockTicks%5===0)save()}},1000);if(state.found.length){$('start').firstChild.textContent='Continuar expedición ';$('resume').textContent=routeUpdated?'Recorrido actualizado: conservas la brújula. Continúa hacia el patio y la capilla.':`Tienes ${state.found.length} de 3 fragmentos guardados.`}
 
 $('next').onclick=()=>{clock.pause();save();arRuntime?.dispose();sessionStorage.setItem('sacre-autostart','1');location.reload()};
 document.addEventListener('visibilitychange',()=>{if(document.hidden){clock.pause();save()}else if(active&&!state.finished)clock.start()});
